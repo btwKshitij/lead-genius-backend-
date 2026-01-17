@@ -19,7 +19,8 @@ class ActivityLog(SQLModel, table=True):
     __tablename__ = "activity_log"
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    org_id: uuid.UUID = Field(foreign_key="organization.id", index=True)
+    # org_id is optional to support users without organizations (pre-setup)
+    org_id: Optional[uuid.UUID] = Field(default=None, foreign_key="organization.id", index=True)
     actor_id: Optional[uuid.UUID] = Field(default=None, foreign_key="user.id", index=True)
     
     # Action details

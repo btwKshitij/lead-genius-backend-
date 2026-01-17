@@ -9,7 +9,7 @@ class RegisterRequest(BaseModel):
     """User registration request."""
     email: EmailStr
     password: str
-    org_name: str
+    org_name: Optional[str] = None  # Optional - org can be created later in setup
     full_name: Optional[str] = None
     
     class Config:

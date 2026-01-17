@@ -63,6 +63,25 @@ class UserRepository(BaseRepository[User]):
         
         return user, org, membership
     
+    async def create_without_org(
+        self, 
+        email: str, 
+        password_hash: str, 
+        full_name: Optional[str] = None
+    ) -> User:
+        """Create user without an organization (org created later in setup)."""
+        user = User(
+            email=email,
+            password_hash=password_hash,
+            current_org_id=None,
+            full_name=full_name
+        )
+        self.session.add(user)
+        await self.session.commit()
+        await self.session.refresh(user)
+        
+        return user
+    
     async def update_last_login(self, user_id: uuid.UUID) -> None:
         """Update user's last login timestamp."""
         user = await self.get(user_id)

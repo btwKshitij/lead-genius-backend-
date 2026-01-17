@@ -51,10 +51,10 @@ class AuthService:
         self, 
         email: str, 
         password: str, 
-        org_name: str,
+        org_name: Optional[str] = None,
         full_name: Optional[str] = None
     ) -> dict:
-        """Register a new user with organization."""
+        """Register a new user, optionally with organization."""
         # Check if email already exists
         existing = await self.user_repo.get_by_email(email)
         if existing:
@@ -63,23 +63,33 @@ class AuthService:
         # Hash password
         password_hash = get_password_hash(password)
         
-        # Create user with org and membership
-        user, org, membership = await self.user_repo.create_with_org(
-            email=email,
-            password_hash=password_hash,
-            org_name=org_name,
-            full_name=full_name
-        )
-        
-        # Log activity
-        await self.activity_repo.log(
-            org_id=org.id,
-            actor_id=user.id,
-            action=Actions.USER_REGISTERED,
-            entity_type="user",
-            entity_id=user.id,
-            description=f"User {email} registered"
-        )
+        # Create user with or without org based on org_name
+        org = None
+        if org_name:
+            # Create user with org and membership
+            user, org, membership = await self.user_repo.create_with_org(
+                email=email,
+                password_hash=password_hash,
+                org_name=org_name,
+                full_name=full_name
+            )
+            
+            # Log activity
+            await self.activity_repo.log(
+                org_id=org.id,
+                actor_id=user.id,
+                action=Actions.USER_REGISTERED,
+                entity_type="user",
+                entity_id=user.id,
+                description=f"User {email} registered with org {org_name}"
+            )
+        else:
+            # Create user without org (org will be created in setup)
+            user = await self.user_repo.create_without_org(
+                email=email,
+                password_hash=password_hash,
+                full_name=full_name
+            )
         
         # Create email verification token
         verification_token = await self.email_verification_repo.create_token(user.id, email)
@@ -95,8 +105,10 @@ class AuthService:
         response = {
             "message": "User registered successfully. Please check your email to verify your account.",
             "user_id": str(user.id),
-            "org_id": str(org.id)
         }
+        
+        if org:
+            response["org_id"] = str(org.id)
         
         # In DEV_MODE, include the token for easy testing
         if settings.DEV_MODE:
