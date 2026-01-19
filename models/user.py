@@ -23,6 +23,12 @@ class Organization(SQLModel, table=True):
     business_model: Optional[str] = None  # B2B, B2C, etc.
     stage: Optional[str] = None  # Startup, Growth, Enterprise
     
+    # Target audience profile
+    target_locations: Optional[str] = None  # Where ideal customers are located
+    social_platforms: Optional[str] = None  # Active social media platforms
+    target_department: Optional[str] = None  # Department that buys the solution
+    target_job_titles: Optional[str] = None  # Job titles to target
+    
     # Settings
     logo_url: Optional[str] = None
     timezone: str = Field(default="UTC")

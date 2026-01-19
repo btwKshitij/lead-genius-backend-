@@ -36,6 +36,10 @@ class UpdateOrganizationRequest(BaseModel):
     industry: Optional[str] = None
     business_model: Optional[str] = None
     stage: Optional[str] = None
+    target_locations: Optional[str] = None
+    social_platforms: Optional[str] = None
+    target_department: Optional[str] = None
+    target_job_titles: Optional[str] = None
     logo_url: Optional[str] = None
     timezone: Optional[str] = None
 
@@ -52,6 +56,10 @@ class OrganizationResponse(BaseModel):
     industry: Optional[str] = None
     business_model: Optional[str] = None
     stage: Optional[str] = None
+    target_locations: Optional[str] = None
+    social_platforms: Optional[str] = None
+    target_department: Optional[str] = None
+    target_job_titles: Optional[str] = None
     logo_url: Optional[str] = None
     timezone: str
     created_at: datetime

@@ -89,6 +89,35 @@ class OrganizationService:
             "message": f"Organization '{name}' created successfully"
         }
     
+    async def update_organization(
+        self,
+        org_id: uuid.UUID,
+        user_id: uuid.UUID,
+        update_data: dict
+    ) -> dict:
+        """Update organization details."""
+        # Verify user has permission (admin or owner)
+        is_admin = await self.member_repo.is_admin(user_id, org_id)
+        if not is_admin:
+            raise_forbidden("Only admins can update organization settings")
+            
+        org = await self.org_repo.update(org_id, update_data)
+        if not org:
+            raise_not_found("Organization")
+            
+        return {
+            "id": str(org.id),
+            "name": org.name,
+            "domain": org.domain,
+            "industry": org.industry,
+            "business_model": org.business_model,
+            "target_locations": org.target_locations,
+            "social_platforms": org.social_platforms,
+            "target_department": org.target_department,
+            "target_job_titles": org.target_job_titles,
+            "message": "Organization updated successfully"
+        }
+
     async def get_user_organizations(self, user_id: uuid.UUID) -> List[dict]:
         """Get all organizations user belongs to."""
         memberships = await self.member_repo.get_user_memberships(user_id)
@@ -102,6 +131,11 @@ class OrganizationService:
                     "name": org.name,
                     "domain": org.domain,
                     "industry": org.industry,
+                    "business_model": org.business_model,
+                    "target_locations": org.target_locations,
+                    "social_platforms": org.social_platforms,
+                    "target_department": org.target_department,
+                    "target_job_titles": org.target_job_titles,
                     "role": membership.role,
                     "joined_at": membership.joined_at.isoformat(),
                     "is_active": membership.is_active

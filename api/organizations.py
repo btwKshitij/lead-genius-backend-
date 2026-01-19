@@ -12,7 +12,8 @@ from backend.schemas.organization import (
     CreateOrganizationRequest,
     InviteUserRequest,
     UpdateMemberRoleRequest,
-    UpdateOrganizationRequest
+    UpdateOrganizationRequest,
+    OrganizationResponse
 )
 from backend.schemas.common import MessageResponse
 from backend.api.deps import get_current_user
@@ -162,3 +163,22 @@ async def leave_organization(
     """
     org_service = OrganizationService(session)
     return await org_service.leave_organization(current_user, org_id)
+
+
+@router.patch("/{org_id}")
+async def update_organization(
+    org_id: uuid.UUID,
+    update_data: UpdateOrganizationRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Update organization details.
+    Requires admin or owner role.
+    """
+    org_service = OrganizationService(session)
+    return await org_service.update_organization(
+        org_id=org_id,
+        user_id=current_user.id,
+        update_data=update_data.model_dump(exclude_unset=True)
+    )
