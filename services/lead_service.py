@@ -183,6 +183,31 @@ class LeadService:
         
         return lead
     
+    async def enrich_bulk(
+        self,
+        org_id: uuid.UUID,
+        user_id: uuid.UUID,
+        lead_ids: List[uuid.UUID]
+    ) -> dict:
+        """Enrich multiple leads."""
+        success = 0
+        failed = 0
+        errors = []
+        
+        for lead_id in lead_ids:
+            try:
+                await self.enrich(org_id, user_id, lead_id)
+                success += 1
+            except Exception as e:
+                failed += 1
+                errors.append(str(e))
+        
+        return {
+            "success": success,
+            "failed": failed,
+            "errors": errors[:5] # Limit errors
+        }
+    
     async def import_csv(
         self,
         org_id: uuid.UUID,

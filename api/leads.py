@@ -2,8 +2,9 @@
 Leads API routes.
 """
 import uuid
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends, Query, UploadFile, File, Response
+from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from backend.database import get_session
@@ -162,4 +163,23 @@ async def enrich_lead(
         current_user.current_org_id,
         current_user.id,
         lead_id
+    )
+
+
+class BulkEnrichRequest(BaseModel):
+    lead_ids: List[uuid.UUID]
+
+
+@router.post("/bulk-enrich")
+async def bulk_enrich_leads(
+    request: BulkEnrichRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Enrich multiple leads."""
+    lead_service = LeadService(session)
+    return await lead_service.enrich_bulk(
+        current_user.current_org_id,
+        current_user.id,
+        request.lead_ids
     )

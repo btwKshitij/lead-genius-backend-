@@ -84,3 +84,49 @@ class CampaignRepository(BaseRepository[Campaign]):
     async def count_by_status(self, org_id: uuid.UUID, status: str) -> int:
         """Count campaigns by status."""
         return await self.count(org_id, {"status": status})
+
+    async def get_global_stats(self, org_id: uuid.UUID) -> dict:
+        """Get aggregated stats across all campaigns for the organization."""
+        # Active campaigns count
+        active_count = await self.count(org_id, {"status": "active"})
+        
+        # Total metrics (SUM)
+        query = select(
+            func.sum(Campaign.contacted_count),
+            func.sum(Campaign.replied_count),
+            func.sum(Campaign.leads_count)
+        ).where(Campaign.org_id == org_id)
+        
+        result = await self.session.exec(query)
+        contacted, replied, total_leads = result.one()
+        
+        contacted = contacted or 0
+        replied = replied or 0
+        total_leads = total_leads or 0
+        
+        # Reply Rate
+        avg_reply_rate = round((replied / contacted * 100), 1) if contacted > 0 else 0
+        
+        # Channel counts
+        # Map DB types to Frontend labels: 'social'->LinkedIn, 'email'->Email, 'ai_call'->AI Call
+        linkedin_count = await self.count(org_id, {"status": "active", "type": "social"})
+        linkedin_running = await self.count(org_id, {"status": "running", "type": "social"})
+        
+        email_count = await self.count(org_id, {"status": "active", "type": "email"})
+        email_running = await self.count(org_id, {"status": "running", "type": "email"})
+        
+        call_count = await self.count(org_id, {"status": "active", "type": "ai_call"})
+        call_running = await self.count(org_id, {"status": "running", "type": "ai_call"})
+        
+        return {
+            "active_campaigns": active_count,
+            "total_contacted": contacted,
+            "avg_reply_rate": avg_reply_rate,
+            "meetings_booked": int(replied * 0.3), # Estimate for now
+            "total_leads": total_leads,
+            "channels": {
+                "linkedin": linkedin_count + linkedin_running,
+                "email": email_count + email_running,
+                "ai_call": call_count + call_running
+            }
+        }

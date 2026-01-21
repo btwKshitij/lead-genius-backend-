@@ -237,20 +237,41 @@ class CampaignService:
             raise_not_found("Campaign", str(campaign_id))
         
         return await self.campaign_repo.get_stats(campaign_id)
+
+    async def get_dashboard_stats(self, org_id: uuid.UUID) -> dict:
+        """Get global campaign dashboard statistics."""
+        return await self.campaign_repo.get_global_stats(org_id)
     
     async def _generate_mock_leads(self, campaign: Campaign) -> List[dict]:
         """Generate mock leads for testing (replace with real extraction)."""
+        import random
+        
         settings = campaign.settings
         target_count = settings.get("target_count", 3)
         
+        # Realistic data pools
+        first_names = ["James", "Sarah", "Michael", "Emma", "David", "Jennifer", "John", "Maria", "Robert", "Lisa"]
+        last_names = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez"]
+        companies = ["TechCorp", "Innovate Inc", "Global Solutions", "Future Systems", "Data Dynamics", "Cloud Nine", "Smart Soft", "Web Wizards", "Net Networks", "Cyber Systems"]
+        locations = ["San Francisco, CA", "New York, NY", "Austin, TX", "London, UK", "Toronto, Canada", "Berlin, Germany", "Sydney, Australia", "Remote"]
+        
         leads = []
-        for i in range(min(target_count, 5)):  # Cap at 5 for mock
+        # Generate between 3 to 8 leads for better demo feel, or up to target_count
+        count = min(target_count, random.randint(3, 8))
+        
+        keyword = settings.get("keywords", ["Professional"])[0] if settings.get("keywords") else "Professional"
+        
+        for i in range(count):
+            first = random.choice(first_names)
+            last = random.choice(last_names)
+            company = random.choice(companies)
+            
             leads.append({
-                "name": f"Lead {i+1} from {campaign.name}",
-                "linkedin_url": f"https://linkedin.com/in/lead-{campaign.id}-{i+1}",
-                "title": settings.get("keywords", ["Professional"])[0] if settings.get("keywords") else "Professional",
-                "company": f"Company {i+1}",
-                "location": settings.get("location", "Remote"),
+                "name": f"{first} {last}",
+                "linkedin_url": f"https://linkedin.com/in/{first.lower()}-{last.lower()}-{uuid.uuid4().hex[:8]}",
+                "title": f"Senior {keyword} at {company}", # Make title contextual
+                "company": company,
+                "location": random.choice(locations),
                 "status": "new"
             })
         

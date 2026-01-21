@@ -3,7 +3,7 @@ Campaigns API routes.
 """
 import uuid
 from typing import Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from backend.database import get_session
@@ -23,11 +23,24 @@ async def create_campaign(
     session: AsyncSession = Depends(get_session)
 ):
     """Create a new campaign."""
+    if not current_user.current_org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active organization selected. Please switch to an organization context."
+        )
+
     campaign_service = CampaignService(session)
-    return await campaign_service.create(
+    campaign = await campaign_service.create(
         current_user.current_org_id,
         current_user.id,
         campaign_data
+    )
+    
+    # Auto-run the campaign to generate leads immediately
+    return await campaign_service.run(
+        current_user.current_org_id,
+        current_user.id,
+        campaign.id
     )
 
 
@@ -126,6 +139,15 @@ async def resume_campaign(
         current_user.id,
         campaign_id
     )
+
+@router.get("/overview-stats")
+async def get_overview_stats(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Get aggregated stats for the campaigns dashboard."""
+    campaign_service = CampaignService(session)
+    return await campaign_service.get_dashboard_stats(current_user.current_org_id)
 
 
 @router.get("/{campaign_id}/stats")

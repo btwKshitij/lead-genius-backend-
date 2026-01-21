@@ -99,3 +99,17 @@ async def recalculate_scores(
         current_user.current_org_id,
         request.lead_ids
     )
+
+
+@router.post("/campaign/{campaign_id}/recalculate", response_model=RecalculateResponse)
+async def recalculate_campaign_scores(
+    campaign_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Recalculate scores for all leads in a specific campaign."""
+    scoring_service = ScoringService(session)
+    return await scoring_service.recalculate_campaign(
+        current_user.current_org_id,
+        campaign_id
+    )

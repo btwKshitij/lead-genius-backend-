@@ -33,7 +33,7 @@ class LeadRepository(BaseRepository[Lead]):
         
         if filters:
             if filters.status:
-                query = query.where(Lead.status == filters.status)
+                query = query.where(Lead.status.ilike(filters.status))
             if filters.source:
                 query = query.where(Lead.source == filters.source)
             if filters.campaign_id:
@@ -167,12 +167,40 @@ class LeadRepository(BaseRepository[Lead]):
         
         # By status
         status_counts = {}
-        for status in ["new", "contacted", "replied", "qualified", "closed", "lost"]:
-            count = await self.count(org_id, {"status": status})
-            status_counts[status] = count
+        status_query = select(Lead.status, func.count(Lead.id)).where(Lead.org_id == org_id).group_by(Lead.status)
+        status_result = await self.session.exec(status_query)
+        for status, count in status_result.all():
+            if status:
+                status_counts[status.lower()] = status_counts.get(status.lower(), 0) + count
         
-        # By enrichment status
+        # Enriched total
         enriched = await self.count(org_id, {"enrichment_status": "enriched"})
+        
+        # Enriched Today
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        query_enriched_today = select(func.count()).where(
+            Lead.org_id == org_id,
+            Lead.enrichment_status == "enriched",
+            Lead.enriched_at >= today_start
+        )
+        result = await self.session.exec(query_enriched_today)
+        enriched_today = result.one()
+        
+        # Needs Review (Score 40-79)
+        query_review = select(func.count()).where(
+            Lead.org_id == org_id,
+            Lead.score >= 40,
+            Lead.score < 80
+        )
+        result = await self.session.exec(query_review)
+        needs_review = result.one()
+        
+        # Failed Enrichment
+        failed_enrichment = await self.count(org_id, {"enrichment_status": "failed"})
+        
+        # Success Rate
+        total_attempts = enriched + failed_enrichment
+        success_rate = round((enriched / total_attempts * 100), 1) if total_attempts > 0 else 0
         
         # Average score
         avg_query = select(func.avg(Lead.score)).where(Lead.org_id == org_id)
@@ -191,6 +219,9 @@ class LeadRepository(BaseRepository[Lead]):
             "total": total,
             "qualified": qualified,
             "enriched": enriched,
+            "enriched_today": enriched_today,
+            "needs_review": needs_review,
+            "success_rate": success_rate,
             "avg_score": round(float(avg_score), 1),
             "by_status": status_counts
         }
