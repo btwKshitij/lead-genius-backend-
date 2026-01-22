@@ -12,3 +12,5 @@ requests
 httpx
 pydantic-settings
 email-validator
+apify-client
+openai

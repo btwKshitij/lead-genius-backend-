@@ -9,4 +9,5 @@ from backend.models.scoring import ScoringRule
 from backend.models.activity import ActivityLog
 from backend.models.webhook import Webhook, WebhookDelivery
 from backend.models.linkedin import LinkedInCredential, LinkedInPreference
+from backend.models.post_analysis import LinkedInPost, PostInteraction
 

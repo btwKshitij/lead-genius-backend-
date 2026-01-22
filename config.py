@@ -34,6 +34,14 @@ class Settings(BaseSettings):
     # LinkedIn API Settings (configure in .env for LinkedIn integration)
     LINKEDIN_CLIENT_ID: str = ""
     LINKEDIN_CLIENT_SECRET: str = ""
+
+    # Apify Settings
+    APIFY_API_TOKEN: str = "apify_api_token_here"
+    APIFY_WEBHOOK_SECRET: str = "webhook_secret"
+    
+    # OpenAI Settings (for AI-powered analysis)
+    OPENAI_API_KEY: str = ""
+    AI_MODEL: str = "gpt-4o-mini"  # or gpt-4, claude-3-5-sonnet, etc.
     
     class Config:
         env_file = ".env"

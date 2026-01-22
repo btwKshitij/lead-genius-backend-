@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from backend.database import init_db
 
 # Import all API routers
-from backend.api import auth, users, leads, campaigns, outreach, personas, scoring, dashboard, organizations, extension, linkedin
+from backend.api import auth, users, leads, campaigns, outreach, personas, scoring, dashboard, organizations, extension, linkedin, apify, analysis
 
 # Import models to ensure they are registered with SQLModel
 from backend.models import (
@@ -60,6 +60,8 @@ app.include_router(scoring.router)
 app.include_router(dashboard.router)
 app.include_router(extension.router)  # Chrome extension API
 app.include_router(linkedin.router)   # LinkedIn API integration
+app.include_router(apify.router)      # Apify integration
+app.include_router(analysis.router)   # Post Analysis
 
 
 @app.get("/")
