@@ -1,6 +1,7 @@
 """
 User and Organization API routes.
 """
+from datetime import datetime
 from fastapi import APIRouter, Depends
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -83,6 +84,81 @@ async def update_current_user_profile(
         created_at=updated_user.created_at,
         last_login_at=updated_user.last_login_at
     )
+
+
+# User Settings endpoints
+@router.get("/api/users/me/settings")
+async def get_user_settings(
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user settings."""
+    return {
+        "language_preference": current_user.language_preference,
+        "timezone": current_user.timezone,
+        "email_preferences": current_user.email_preferences or {}
+    }
+
+
+@router.patch("/api/users/me/settings")
+async def update_user_settings(
+    settings: dict,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Update current user settings."""
+    # Update settings fields
+    if "language_preference" in settings:
+        current_user.language_preference = settings["language_preference"]
+    if "timezone" in settings:
+        current_user.timezone = settings["timezone"]
+    if "email_preferences" in settings:
+        current_user.email_preferences = settings["email_preferences"]
+    
+    current_user.updated_at = datetime.utcnow()
+    session.add(current_user)
+    await session.commit()
+    await session.refresh(current_user)
+    
+    return {
+        "language_preference": current_user.language_preference,
+        "timezone": current_user.timezone,
+        "email_preferences": current_user.email_preferences or {}
+    }
+
+
+@router.get("/api/users/me/activity")
+async def get_user_activity(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    limit: int = 50
+):
+    """Get user activity logs."""
+    from backend.models.activity import ActivityLog
+    
+    query = select(ActivityLog).where(
+        ActivityLog.actor_id == current_user.id
+    ).order_by(ActivityLog.created_at.desc()).limit(limit)
+    
+    result = await session.exec(query)
+    activities = result.all()
+    
+    return {
+        "items": [
+            {
+                "id": str(activity.id),
+                "action": activity.action,
+                "entity_type": activity.entity_type,
+                "entity_id": str(activity.entity_id) if activity.entity_id else None,
+                "description": activity.description,
+                "meta_data": activity.meta_data,
+                "ip_address": activity.ip_address,
+                "user_agent": activity.user_agent,
+                "created_at": activity.created_at.isoformat()
+            }
+            for activity in activities
+        ],
+        "total": len(activities)
+    }
 
 
 # Organization endpoints

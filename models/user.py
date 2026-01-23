@@ -6,7 +6,8 @@ import uuid
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field, Relationship, Column
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class Organization(SQLModel, table=True):
@@ -84,6 +85,11 @@ class User(SQLModel, table=True):
     # Profile
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    
+    # User Settings
+    language_preference: str = Field(default="en")  # UI language
+    timezone: str = Field(default="UTC")  # User timezone
+    email_preferences: Optional[dict] = Field(default=None, sa_column=Column(JSONB))  # Email notification settings
     
     # Verification status
     is_verified: bool = Field(default=False)
