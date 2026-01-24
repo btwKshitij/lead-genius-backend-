@@ -123,6 +123,83 @@ class AnalysisService:
             
             logger.info(f"Processed {interactions_count} interactions for post {post.id}")
 
+    async def process_manual_data(self, data: Dict[str, Any], org_id: uuid.UUID) -> Dict[str, Any]:
+        """
+        Process data sent manually from the extension.
+        """
+        url = data.get("url")
+        extracted_data = data.get("extracted_data", {})
+        
+        print(f"  > Processing Manual Data for: {url}")
+        
+        # 1. Create or Get Post Record
+        with Session(engine) as session:
+            # Check if post exists
+            statement = select(LinkedInPost).where(
+                LinkedInPost.post_url == url, 
+                LinkedInPost.org_id == org_id
+            )
+            post = session.exec(statement).first()
+            
+            if not post:
+                print("  > Creating new LinkedInPost record...")
+                post = LinkedInPost(
+                    post_url=url,
+                    status="processing",
+                    org_id=org_id
+                )
+                session.add(post)
+                session.commit()
+                session.refresh(post)
+            else:
+                print(f"  > Found existing LinkedInPost record: {post.id}")
+            
+            # 2. Update Metadata
+            post.post_content = extracted_data.get("text", "")
+            post.author_name = extracted_data.get("author", {}).get("name")
+            
+            # AI Analysis
+            print("  > Running AI Analysis on post content...")
+            ai_post_analysis = ai_analysis_service.analyze_post_content(post.post_content)
+            post.post_intent = ai_post_analysis.get("intent", "unknown")
+            post.ai_insights = ai_post_analysis
+            post.status = "completed"
+            
+            # 3. Process Interactions
+            interactions_count = 0
+            new_leads = 0
+            
+            comments = extracted_data.get("comments", [])
+            print(f"  > Processing {len(comments)} comments...")
+            for comment in comments:
+                interaction = self._process_interaction(session, post, "COMMENT", comment, None)
+                if interaction:
+                    interactions_count += 1
+                    if interaction.classification == "high" and interaction.relevance_score >= 70:
+                        self._create_lead_from_interaction(session, interaction, post)
+                        new_leads += 1
+
+            likes = extracted_data.get("likes", [])
+            print(f"  > Processing {len(likes)} likes...")
+            for like in likes:
+                interaction = self._process_interaction(session, post, "LIKE", like, None)
+                if interaction:
+                    interactions_count += 1
+            
+            post.total_comments = len(comments)
+            post.total_likes = len(likes)
+            session.add(post)
+            session.commit()
+            
+            print(f"  > DONE. Processed {interactions_count} interactions. Created {new_leads} new leads.")
+            
+            return {
+                "success": True,
+                "post_id": str(post.id),
+                "interactions_processed": interactions_count,
+                "leads_created": new_leads
+            }
+
     def _process_interaction(
         self, 
         session: Session, 

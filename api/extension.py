@@ -284,3 +284,35 @@ async def get_extension_stats(
         "failed": stats.get("failed", 0),
         "total": sum(stats.values())
     }
+
+
+class ManualIngestRequest(BaseModel):
+    """Request payload for manual data ingestion."""
+    url: str
+    html_content: Optional[str] = None
+    extracted_data: dict
+
+@router.post("/ingest/post")
+async def ingest_manual_post(
+    request: ManualIngestRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Ingest scraped post data manually from the extension.
+    """
+    from backend.services.analysis_service import analysis_service
+    
+    print(f"\n[MANUAL INGEST] Received data for URL: {request.url}")
+    print(f"[MANUAL INGEST] Extracted Data Keys: {list(request.extracted_data.keys())}")
+    
+    try:
+        result = await analysis_service.process_manual_data(
+            data=request.model_dump(),
+            org_id=current_user.current_org_id
+        )
+        print(f"[MANUAL INGEST] Success! Result: {result}\n")
+        return result
+    except Exception as e:
+        print(f"[MANUAL INGEST] Error: {str(e)}\n")
+        return {"success": False, "error": str(e)}

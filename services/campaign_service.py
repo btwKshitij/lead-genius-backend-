@@ -150,6 +150,20 @@ class CampaignService:
         # Update status to processing
         campaign = await self.campaign_repo.update_status(campaign_id, "processing")
         
+        # Dispatch to appropriate handler
+        if campaign.type == 'linkedin-post':
+            from backend.services.analysis_service import analysis_service
+            
+            use_apify = campaign.settings.get("use_cloud_scraper", True)
+            url = campaign.settings.get("url")
+            
+            if url and use_apify:
+                await analysis_service.analyze_posts([url], org_id)
+                # Note: Results come back via webhook
+                pass
+            
+            return campaign
+
         # Mock lead generation (replace with real extraction later)
         mock_leads = await self._generate_mock_leads(campaign)
         
